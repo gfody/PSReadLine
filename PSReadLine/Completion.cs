@@ -12,6 +12,7 @@ using System.Linq;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.PowerShell.Internal;
 
 namespace Microsoft.PowerShell
@@ -254,13 +255,23 @@ namespace Microsoft.PowerShell
             _tabCommandCount += 1;
         }
 
+        private static Regex dotSlash = new Regex(@"\.\\(.*)$", RegexOptions.Compiled);
+
         private void DoReplacementForCompletion(CompletionResult completionResult, CommandCompletion completions)
         {
             var replacementText = completionResult.CompletionText;
             int cursorAdjustment = 0;
+            var bs = _buffer.ToString();
+
             if (completionResult.ResultType == CompletionResultType.ProviderContainer)
             {
+                if (!dotSlash.IsMatch(bs))
+                    replacementText = dotSlash.Replace(replacementText, "$1");
+
                 replacementText = GetReplacementTextForDirectory(replacementText, ref cursorAdjustment);
+
+                if (bs.IndexOf('/') > 0 && bs.IndexOf('\\') == -1)
+                    replacementText = replacementText.Replace('\\', '/');
             }
             Replace(completions.ReplacementIndex, completions.ReplacementLength, replacementText);
             if (cursorAdjustment != 0)
